@@ -58,11 +58,6 @@ The goal of this repository is preservation: keeping the eZ430-Chronos useful,
 buildable and modifiable with a modern MSP430-GCC toolchain while continuing to
 share the source code openly under the applicable upstream terms.
 
-## Suggested GitHub topics
-
-`ez430-chronos` `cc430f6137` `msp430` `msp430-gcc` `openchronos`
-`embedded` `firmware` `watch` `retrocomputing` `texas-instruments`
-
 ## Wireless / BlueRobin note
 
 BlueRobin support is intentionally not included in this public GCC repository. The old BM innovations header and legacy precompiled BlueRobin/IAR libraries were removed.
