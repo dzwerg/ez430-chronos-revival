@@ -1,0 +1,14 @@
+# MSP430-GCC build output
+gcc/build/
+*.o
+*.d
+*.elf
+*.hex
+*.map
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*~
