@@ -927,13 +927,17 @@ int main(void)
 // *************************************************************************************************
 void init_ucs(void)
 {
-	// fixed19 diagnostic: do not depend on the 32-kHz crystal. Use the
-	// internal REFO (~32768 Hz) for ACLK and as the FLL reference.
-	// This keeps Timer0/RTC-style ticks alive while isolating XT1 faults.
-	P5SEL &= ~(BIT0 | BIT1);
-	UCSCTL6 |= XT1OFF;
-	UCSCTL3 = SELREF__REFOCLK;
-	UCSCTL4 = SELA__REFOCLK | SELS__DCOCLKDIV | SELM__DCOCLKDIV;
+	u16 osc_timeout;
+
+	/* RC1.2: use the watch's 32.768-kHz crystal for accurate timekeeping.
+	   RC1/RC1.1 still contained the fixed19 diagnostic workaround, which
+	   deliberately disabled XT1 and used the much less accurate REFO clock.
+	   Keep startup bounded so a damaged crystal cannot make the watch hang. */
+	P5SEL |= BIT0 | BIT1;
+	UCSCTL6 &= ~XT1OFF;
+	UCSCTL6 |= XCAP_3;
+	UCSCTL3 = SELREF__XT1CLK;
+	UCSCTL4 = SELA__XT1CLK | SELS__DCOCLKDIV | SELM__DCOCLKDIV;
 
 	__bis_SR_register(SCG0);
 	UCSCTL0 = 0x0000;
@@ -942,9 +946,27 @@ void init_ucs(void)
 	__bic_SR_register(SCG0);
 	__delay_cycles(250000);
 
-	// Clear DCO/oscillator fault flags, but never wait on XT1.
-	UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + XT1HFOFFG + DCOFFG);
-	SFRIFG1 &= ~OFIFG;
+	/* Give XT1 time to settle, but never reproduce the original firmware's
+	   endless oscillator-fault loop. */
+	osc_timeout = 0xFFFFu;
+	do
+	{
+		UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + XT1HFOFFG + DCOFFG);
+		SFRIFG1 &= ~OFIFG;
+		__delay_cycles(64);
+	} while ((SFRIFG1 & OFIFG) && --osc_timeout);
+
+	if (SFRIFG1 & OFIFG)
+	{
+		/* Broken/missing watch crystal: remain usable on REFO instead of
+		   hanging during boot. Accuracy will be reduced in this fallback. */
+		P5SEL &= ~(BIT0 | BIT1);
+		UCSCTL6 |= XT1OFF;
+		UCSCTL3 = SELREF__REFOCLK;
+		UCSCTL4 = SELA__REFOCLK | SELS__DCOCLKDIV | SELM__DCOCLKDIV;
+		UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + XT1HFOFFG + DCOFFG);
+		SFRIFG1 &= ~OFIFG;
+	}
 }
 
 
