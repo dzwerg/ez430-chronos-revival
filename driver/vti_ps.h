@@ -50,6 +50,11 @@ extern u16 ps_get_temp(void);
 extern void init_pressure_table(void);
 extern void update_pressure_table(s16 href, u32 p_meas, u16 t_meas);
 extern s16 conv_pa_to_meter(u32 p_meas, u16 t_meas);
+extern u8 ps_sensor_type;
+
+#define PS_SENSOR_NONE    (0u)
+#define PS_SENSOR_BMP085  (1u)
+#define PS_SENSOR_SCP1000 (2u)
 
 
 // *************************************************************************************************

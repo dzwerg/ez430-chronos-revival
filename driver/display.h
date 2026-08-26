@@ -77,7 +77,6 @@ typedef union
     u16 update_battery_voltage 	: 1;    // 1 = Battery voltage was updated
     u16 update_date      		: 1;    // 1 = Date was updated
     u16 update_alarm      		: 1;    // 1 = Alarm time was updated
-    u16 update_acceleration		: 1; 	// 1 = Acceleration data was updated
   } flag;
   u16 all_flags;            // Shortcut to all display flags (for reset)
 } s_display_flags;

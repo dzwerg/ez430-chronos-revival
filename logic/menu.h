@@ -74,22 +74,28 @@ extern const struct menu menu_L1_Time;
 extern const struct menu menu_L1_Alarm;
 extern const struct menu menu_L1_Altitude;
 extern const struct menu menu_L1_Temperature;
-extern const struct menu menu_L1_Altitude;
-extern const struct menu menu_L1_Acceleration;
+extern const struct menu menu_L1_Battery;
 
 // Line2 navigation
 extern const struct menu menu_L2_Date;
 extern const struct menu menu_L2_BeatTime;
 extern const struct menu menu_L2_BinWatch;
+extern const struct menu menu_L2_Moon;
 extern const struct menu menu_L2_TimeZone2;
 extern const struct menu menu_L2_Stopwatch;
-extern const struct menu menu_L2_Battery;
 extern const struct menu menu_L2_CalDist;
 extern const struct menu menu_L2_cdtimer;
 extern const struct menu menu_L2_random;
-extern const struct menu menu_L2_agility;
 
 // Pointers to current menu item
 extern const struct menu * ptrMenu_L1;
 extern const struct menu * ptrMenu_L2;
+extern u8 MenuBinEnabled;
+extern u8 MenuDiceEnabled;
+extern u8 MenuBatteryEnabled;
+extern u8 MenuMoonEnabled;
+extern u8 MenuBeatEnabled;
+extern u8 MenuAltitudeEnabled;
+extern u8 MenuTemperatureEnabled;
+extern u8 MenuTimezone2Enabled;
 #endif /*MENU_H_*/

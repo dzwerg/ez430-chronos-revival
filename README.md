@@ -1,52 +1,60 @@
-# eZ430-Chronos Custom Firmware - MSP430-GCC
+# eZ430-Chronos Custom Firmware RC1
 
 Target: TI eZ430-Chronos / CC430F6137
 Toolchain: MSP430-GCC 9.3.1.11 compatible
-Build variants: 433 / 868 / 915 MHz (beta target: 868 MHz)
+Release: RC1
+Build variants: 433 / 868 / 915 MHz
+
+RC1 uses one universal RF-free firmware image for all supported watch-frequency
+variants. The frequency parameter only keeps the historical build-directory
+layout; it does not enable the radio.
 
 Build from gcc:
-make clean
-make FREQUENCY=868 SUPPORT\_DIR=C:/ti/msp430-gcc/include
+    make clean
+    make FREQUENCY=868 SUPPORT_DIR=C:/ti/msp430-gcc/include
 
-Output:
-gcc/build/868/ez430\_chronos.hex
+Build output:
+    gcc/build/868/ez430_chronos.hex
 
 Flash example:
-C:\\ti\\MSPFlasher\_1.3.20\\MSP430Flasher.exe -n CC430F6137 -w build\\868\\ez430\_chronos.hex -v -z \[VCC]
+    C:\ti\MSPFlasher_1.3.20\MSP430Flasher.exe -n CC430F6137 -w build\868\ez430_chronos.hex -v -z [VCC]
 
-## 
+RC1 menu
+-----------
+LINE 1 (*): Time -> Alarm -> Temperature -> Altitude/Pressure -> Battery
+LINE 2 (#): Date -> TZ2 -> Beat Time -> Binary Watch -> Moon -> Stopwatch -> Countdown -> Dice
 
-## Active menu
+Custom features
+---------------
+- Guarded LPM3 power saving with reliable button wake-up and watchdog protection.
+- Alarm ON/OFF with UP; long press opens alarm setting.
+- Time setup: 12/24 h, time, seconds-per-week fine adjustment, DST, hourly beep,
+  key tones and UTC offset.
+- TZ2 with half-hour offsets, independent DST, Main/TZ2 SWAP, Beat view and a
+  12-hour main-time view with seconds and PM indicator.
+- Full-screen Swatch Internet Time in xxx.xx format.
+- Binary watch face and moon phase / days-to-NEW / days-to-FULL views.
+- Stopwatch: DOWN start/stop, UP reset, STOP/LAP mode retained.
+- Countdown: DOWN start/stop, UP restore configured start value.
+- Long LIGHT: backlight setup. DOWN=1..30 seconds, UP=continuous ON/OFF, LIGHT=exit.
+- Dice/random setup includes MIN, MAX, MODE and STYL.
+- Battery view shows BATT above and measured voltage below.
+- Below 2.40 V the battery icon blinks globally.
+- Optional menu items can be hidden from a nested DATE setup menu: BIN, DICE,
+  BATT, MOON, BEAT, ALTI, TEMP and TZ2.
+- Automatic pressure-sensor detection for BMP085 (white PCB) and SCP1000
+  (older black PCB); the sensor is shut down or put in standby on exit.
+- Radio/BlueRobin, acceleration, Agility and Bubble Game are intentionally removed.
 
-LINE 1 (\*): Time -> Alarm -> Temperature -> Altitude -> Acceleration
-LINE 2 (#): Date -> TZ2 -> Beat Time -> Binary Watch -> Stopwatch -> Countdown -> Random -> Battery
-
-## 
-
-## Custom features
-
-* Alarm ON/OFF with UP; long press opens alarm setting.
-* Time setup includes hourly double-beep ON/OFF and user UTC offset.
-* UTC and DST are used for Beat Time; displayed local time remains user-controlled.
-* TZ2 supports half-hour offsets and shows HH:MM:SS.
-* Beat Time uses xxx.xx format.
-* Binary watch face uses both LCD lines.
-* Long LIGHT: backlight setup. DOWN=1..30 seconds, UP=continuous ON/OFF, LIGHT=exit.
-* Random setup includes MIN and MAX.
-* Battery measurement runs on Battery-menu entry and refreshes while visible.
-* Below 2.40 V the battery icon blinks globally.
-* Watchdog enabled; LPM3 sleep intentionally disabled in this beta.
-
-## 
-
-## Cleanup policy
-
-All .c and .h source files are retained, including unused modules.
+Cleanup policy
+--------------
+Legacy source files may remain for reference, but RF and motion modules are excluded
+from the RC1 build.
 Removed: IAR project/settings files, .r43 objects/libraries, old prebuilt TI-TXT images,
 obsolete old manual, and historical runtime-fix note files.
 
-See MANUAL\_DE\_EN\_TL.pdf / .docx.
-
+See `MANUAL_DE_EN_TL.pdf` or the editable `MANUAL_DE_EN_TL.docx` for the complete
+German, English and Tagalog manual.
 
 
 ## Project origin, licensing and credits
@@ -65,9 +73,15 @@ The goal of this repository is preservation: keeping the eZ430-Chronos useful,
 buildable and modifiable with a modern MSP430-GCC toolchain while continuing to
 share the source code openly under the applicable upstream terms.
 
-## 
+## Suggested GitHub topics
+
+`ez430-chronos` `cc430f6137` `msp430` `msp430-gcc` `openchronos`
+`embedded` `firmware` `watch` `retrocomputing` `texas-instruments`
 
 ## Wireless / BlueRobin note
 
 BlueRobin support is intentionally not included in this public GCC repository. The old BM innovations header and legacy precompiled BlueRobin/IAR libraries were removed.
 
+## DST rule
+
+DST automation currently follows the EU/CET-CEST rule. This means a UTC+1 zone with DST enabled continues to switch automatically between CET and CEST even when it is stored in TZ2 after a timezone SWAP.

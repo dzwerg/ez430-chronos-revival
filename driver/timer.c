@@ -47,7 +47,6 @@
 #include "ports.h"
 #include "buzzer.h"
 #include "vti_ps.h"
-#include "vti_as.h"
 #include "display.h"
 
 // logic
@@ -57,8 +56,8 @@
 #include "alarm.h"
 #include "altitude.h"
 #include "display.h"
-#include "acceleration.h"
 #include "temperature.h"
+#include "date.h"
 
 
 // *************************************************************************************************
@@ -81,6 +80,30 @@ void (*fptr_Timer0_A3_function)(void);
 // Global Variable section
 struct timer sTimer;
 
+/* Fractional ACLK-tick correction.  The user value is seconds/week; the
+   accumulator spreads it over all seconds instead of jumping at midnight. */
+static s32 clock_correction_phase;
+
+static u16 corrected_second_ticks(void)
+{
+    s32 phase = clock_correction_phase +
+                ((s32)ClockCorrectionSecondsPerWeek * 32768L);
+    u16 ticks = 32768u;
+
+    while (phase >= 604800L)
+    {
+        phase -= 604800L;
+        ticks--;
+    }
+    while (phase <= -604800L)
+    {
+        phase += 604800L;
+        ticks++;
+    }
+    clock_correction_phase = phase;
+    return ticks;
+}
+
 // *************************************************************************************************
 // Extern section
 extern void to_lpm(void);
@@ -94,6 +117,7 @@ extern void to_lpm(void);
 // *************************************************************************************************
 void Timer0_Init(void)
 {
+	clock_correction_phase = 0;
 	// Set interrupt frequency to 1Hz
 	TA0CCR0   = 32768 - 1;                
 
@@ -238,7 +262,7 @@ __attribute__((interrupt(TIMER0_A0_VECTOR))) void TIMER0_A0_ISR(void)
     extern volatile u8 fixed27_tick_pending;
 
     /* Keep the proven continuous-mode scheduling from fixed26/fixed28. */
-    TA0CCR0 += 32768;
+    TA0CCR0 += corrected_second_ticks();
     TA0CCTL0 &= ~CCIFG;
 
     /* fixed30: proven minimal 1 Hz clock path.
@@ -339,7 +363,4 @@ __attribute__((interrupt(TIMER0_A1_VECTOR))) void TIMER0_A1_5_ISR(void)
 	// Exit from LPM3 on RETI
 	_BIC_SR_IRQ(LPM3_bits);               
 }
-
-
-
 

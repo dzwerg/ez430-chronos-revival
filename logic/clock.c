@@ -54,10 +54,10 @@
 #include "user.h"
 #include "date.h"
 #include "random.h"
-#include "agility.h"
 #include "display2.h"
 #include "display2.h"
 #include "timezone.h"
+#include "keybeep.h"
 
 // *************************************************************************************************
 // Prototypes section
@@ -74,8 +74,6 @@ extern void init_ucs(void);
 
 // *************************************************************************************************
 // Defines section
-#define DAILY_CORRECTION_SEC_DEFAULT     (0)  // 0..59 seconds
-#define WEEKLY_CORRECTION_SEC_DEFAULT    (0)  // sum of daily+weekly must be in range of 0..59 seconds!
 #define DST_NO      0
 #define DST_AUTO    1
 
@@ -85,11 +83,9 @@ __attribute__((noinit)) struct time sTime;
 
 /* fixed57: optional double-beep at every full hour. Default OFF after reset. */
 u8 HourlyBeepFlag = 0;
-u8 TimeCorrectionFlag;
 u8 DST_CorrectionFlag;
 u8 DST_AutoFlag;
-s8 DailyCorr;
-s8 WeeklyCorr;
+s16 ClockCorrectionSecondsPerWeek;
 u8 TimeAdjustmentFlag;
 
 // For Backlight: BL remains on for about 4sec also after button pressed
@@ -153,13 +149,11 @@ void reset_clock(void)
 	sTime.last_activity 		  = 0;
 
 	// Reset Time correction & DST flags
-	TimeCorrectionFlag = 0;
 	DST_CorrectionFlag = 0;
     TimeAdjustmentFlag = 0;
     
     DST_AutoFlag = DST_NO;
-    DailyCorr  = (s8)DAILY_CORRECTION_SEC_DEFAULT;
-    WeeklyCorr = (s8)WEEKLY_CORRECTION_SEC_DEFAULT;
+    ClockCorrectionSecondsPerWeek = 0;
 }
 
 
@@ -205,10 +199,6 @@ void clock_tick(void)
 			{
 				sTime.hour = 0;
 				add_day();
-				// Check for start of weekly correction midnight between Sunday and Monday
-				if(sDate.DayOfWeek == 1) { TimeCorrectionFlag = 2; }  
-				// Check for start of daily correction every midnight
-				else { TimeCorrectionFlag = 1; }
 			    
 			    // Check for start of DST (Daylight saving time) correction
 			    if(DST_AutoFlag == DST_AUTO)
@@ -244,45 +234,6 @@ void clock_tick(void)
 		}
 	}
     
-    // Time correction
-    if(TimeCorrectionFlag != 0)
-    {
-        // Daily correction
-        if(TimeCorrectionFlag == 1)
-        {
-            if((DailyCorr < 0) && (sTime.second == (u8)(DailyCorr * (-1))))
-            {
-                sTime.second = 0;
-                TimeCorrectionFlag = 0;
-            }
-            if(DailyCorr > 0)
-            {
-                sTime.second = DailyCorr;
-                TimeCorrectionFlag = 0;
-            }
-            if(DailyCorr == 0){ TimeCorrectionFlag = 0; }
-        }
-        // Weekly correction
-        if(TimeCorrectionFlag == 2)
-        {
-            s8 WeeklyCorrTmp;
-            
-            WeeklyCorrTmp = WeeklyCorr + DailyCorr;
-            
-            if((WeeklyCorrTmp < 0) && (sTime.second == (u8)(WeeklyCorrTmp * (-1))))
-            {
-                sTime.second = 0;
-                TimeCorrectionFlag = 0;
-            }
-            if(WeeklyCorr > 0)
-            {
-                sTime.second = (u8)WeeklyCorrTmp;
-                TimeCorrectionFlag = 0;
-            }
-            if(WeeklyCorr == 0) { TimeCorrectionFlag = 0; }
-        }
-    }
-
     // DST (Daylight saving time) correction
     if(DST_CorrectionFlag != 0)
     {
@@ -400,10 +351,10 @@ void mx_time(u8 line)
 	s32 hours;
 	s32 minutes;
 	s32 seconds;
-	s32 DailyCorrTmp;
-    s32 WeeklyCorrTmp;
+	s32 ClockCorrectionTmp;
     s32 DST_AutoFlagTmp;
     s32 HourlyBeepFlagTmp;
+    s32 KeyBeepEnabledTmp;
     s32 UTCOffsetHalfHoursTmp;
     
 	u8 * str;
@@ -426,10 +377,10 @@ void mx_time(u8 line)
 	hours 		= sTime.hour; 
 	minutes 	= sTime.minute;
 	seconds 	= sTime.second;
-	DailyCorrTmp  = DailyCorr;
-	WeeklyCorrTmp = WeeklyCorr;
+	ClockCorrectionTmp = ClockCorrectionSecondsPerWeek;
 	DST_AutoFlagTmp = DST_AutoFlag;
 	HourlyBeepFlagTmp = HourlyBeepFlag;
+	KeyBeepEnabledTmp = KeyBeepEnabled;
 	UTCOffsetHalfHoursTmp = PrimaryUtcOffsetHalfHours;
 	
 	// Init value index
@@ -459,11 +410,11 @@ void mx_time(u8 line)
 			sTime.hour 	 = hours;
 			sTime.minute = minutes;
 			sTime.second = seconds;
-	        DailyCorr    = DailyCorrTmp;
-	        WeeklyCorr   = WeeklyCorrTmp;
+	        ClockCorrectionSecondsPerWeek = (s16)ClockCorrectionTmp;
 	        DST_AutoFlag = DST_AutoFlagTmp;
 	        timezone_set_dst_enabled((u8)DST_AutoFlagTmp);
 	        HourlyBeepFlag = (u8)HourlyBeepFlagTmp;
+	        KeyBeepEnabled = (u8)KeyBeepEnabledTmp;
 	        PrimaryUtcOffsetHalfHours = (s8)UTCOffsetHalfHoursTmp;
 
 			// Start clock timer
@@ -517,30 +468,31 @@ void mx_time(u8 line)
 						select = 4;
 						break;
 
-			case 4:		// Set daily adjusting value
+			case 4:		// Set one simple clock correction in seconds per week
 						clear_display();
-						display_chars(LCD_SEG_L2_4_0, (u8 *)"ADJ-1", SEG_ON);
-					    set_value(&DailyCorrTmp, 2, 0, -10, 10, SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE + SETVALUE_DISPLAY_ARROWS, LCD_SEG_L1_3_2, display_value1);
+						display_chars(LCD_SEG_L2_4_0, (u8 *)" ADJ ", SEG_ON);
+					    set_value(&ClockCorrectionTmp, 3, 0, -99, 99, SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE + SETVALUE_DISPLAY_ARROWS, LCD_SEG_L1_3_1, display_value1);
 						select = 5;
 						break;
 			
-			case 5:		// Set weekly adjusting value
-						display_chars(LCD_SEG_L2_4_0, (u8 *)"ADJ-7", SEG_ON);
-					    set_value(&WeeklyCorrTmp, 2, 0, -30, 30, SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE + SETVALUE_DISPLAY_ARROWS, LCD_SEG_L1_3_2, display_value1);
-						select = 6;
-						break;
-			
-			case 6:		// Set DST (Daylight Saving Time) automatic
+			case 5:		// Set DST (Daylight Saving Time) ON/OFF
 						clear_display();
 						display_chars(LCD_SEG_L2_4_0, (u8 *)" DST ", SEG_ON);
 					    set_value(&DST_AutoFlagTmp, 0, 0, 0, 1, SETVALUE_ROLLOVER_VALUE + SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE, LCD_SEG_L1_3_0, display_OFF_ON);
-						select = 7;
+						select = 6;
 						break;
 
-			case 7:		// Hourly full-hour double beep ON/OFF
+			case 6:		// Hourly full-hour double beep ON/OFF
 						clear_display();
 						display_chars(LCD_SEG_L2_4_0, (u8 *)"HOUR ", SEG_ON);
 					    set_value(&HourlyBeepFlagTmp, 0, 0, 0, 1, SETVALUE_ROLLOVER_VALUE + SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE, LCD_SEG_L1_3_0, display_OFF_ON);
+						select = 7;
+						break;
+
+			case 7:		// Key tones ON/OFF (LIGHT key is always silent)
+						clear_display();
+						display_chars(LCD_SEG_L2_4_0, (u8 *)"BEEP ", SEG_ON);
+					    set_value(&KeyBeepEnabledTmp, 0, 0, 0, 1, SETVALUE_ROLLOVER_VALUE + SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE, LCD_SEG_L1_3_0, display_OFF_ON);
 						select = 8;
 						break;
 
@@ -584,8 +536,12 @@ void display_time(u8 line, u8 update)
 	u8 hour12;
 	
 	// Partial update
- 	if (update == DISPLAY_LINE_UPDATE_PARTIAL) 
+	if (update == DISPLAY_LINE_UPDATE_PARTIAL) 
 	{
+		/* Normal HH:MM display: colon toggles once per second. */
+		if (sTime.line1ViewStyle == DISPLAY_DEFAULT_VIEW)
+			display_symbol(switch_seg(line, LCD_SEG_L1_COL, LCD_SEG_L2_COL0),
+			               (sTime.second & 1u) ? SEG_ON_BLINK_OFF : SEG_OFF_BLINK_OFF);
 		if(sTime.drawFlag != 0) 
 		{
 			if (sTime.line1ViewStyle == DISPLAY_DEFAULT_VIEW)
@@ -650,7 +606,8 @@ void display_time(u8 line, u8 update)
 							
 			// Display minute
 			display_chars(switch_seg(line, LCD_SEG_L1_1_0, LCD_SEG_L2_1_0), chronos_itoa(sTime.minute, 2, 0), SEG_ON); 
-			display_symbol(switch_seg(line, LCD_SEG_L1_COL, LCD_SEG_L2_COL0), SEG_ON_BLINK_OFF);
+			display_symbol(switch_seg(line, LCD_SEG_L1_COL, LCD_SEG_L2_COL0),
+			               (sTime.second & 1u) ? SEG_ON_BLINK_OFF : SEG_OFF_BLINK_OFF);
 		}
 		else
 		{

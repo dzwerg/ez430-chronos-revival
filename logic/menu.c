@@ -41,6 +41,7 @@
 
 // system
 #include "project.h"
+#include <stddef.h>
 
 // driver
 #include "display.h"
@@ -52,16 +53,15 @@
 #include "date.h"
 #include "beattime.h"
 #include "binwatch.h"
+#include "moon.h"
 #include "timezone.h"
 #include "alarm.h"
 #include "stopwatch.h"
 #include "temperature.h"
 #include "altitude.h"
 #include "battery.h"
-#include "acceleration.h"
 #include "countdowntimer.h"
 #include "random.h"
-#include "agility.h"
 
 
 // *************************************************************************************************
@@ -73,6 +73,14 @@
 // Global Variable section
 const struct menu * ptrMenu_L1 = NULL;
 const struct menu * ptrMenu_L2 = NULL;
+u8 MenuBinEnabled = 1;
+u8 MenuDiceEnabled = 1;
+u8 MenuBatteryEnabled = 1;
+u8 MenuMoonEnabled = 1;
+u8 MenuBeatEnabled = 1;
+u8 MenuAltitudeEnabled = 1;
+u8 MenuTemperatureEnabled = 1;
+u8 MenuTimezone2Enabled = 1;
 
 
 // *************************************************************************************************
@@ -109,15 +117,10 @@ u8 update_battery_voltage(void)
 {
 	return (display.flag.update_battery_voltage);
 }
-u8 update_acceleration(void)
-{
-	return (display.flag.update_acceleration);
-}
-
 // *************************************************************************************************
 // User navigation ( [____] = default menu item after reset )
 //
-//	LINE1: 	[Time] -> Alarm -> Temperature -> Altitude/Ambient pressure -> Acceleration
+//	LINE1: 	[Time] -> Alarm -> Temperature -> Altitude/Ambient pressure
 //
 //	LINE2: 	[Date] -> Stopwatch -> Countdowntimer -> Agility indicator -> Number storage -> Random number generator -> Battery
 //
@@ -158,15 +161,15 @@ const struct menu menu_L1_Altitude =
 	FUNCTION(mx_altitude),				// sub menu function
 	FUNCTION(display_altitude),			// display function
 	FUNCTION(update_time),				// new display data
-	&menu_L1_Acceleration,
+	&menu_L1_Battery,
 };
-// Line1 - Acceleration
-const struct menu menu_L1_Acceleration =
+// Line1 - Battery voltage
+const struct menu menu_L1_Battery =
 {
-	FUNCTION(sx_acceleration),			// direct function
-	FUNCTION(dummy),					// sub menu function
-	FUNCTION(display_acceleration),		// display function
-	FUNCTION(update_acceleration),		// new display data
+	FUNCTION(dummy),
+	FUNCTION(dummy),
+	FUNCTION(display_battery_V),
+	FUNCTION(update_battery_voltage),
 	&menu_L1_Time,
 };
 //-----------------------------------------------------------------------------
@@ -195,12 +198,21 @@ const struct menu menu_L2_BinWatch =
 	FUNCTION(dummy),
 	FUNCTION(display_binwatch),
 	FUNCTION(update_time),
+	&menu_L2_Moon,
+};
+// Line2 - Moon phase full-screen view
+const struct menu menu_L2_Moon =
+{
+	FUNCTION(sx_moon),
+	FUNCTION(dummy),
+	FUNCTION(display_moon),
+	FUNCTION(update_time),
 	&menu_L2_Stopwatch,
 };
 // Line2 - Second Time Zone
 const struct menu menu_L2_TimeZone2 =
 {
-	FUNCTION(dummy),
+	FUNCTION(sx_timezone2),
 	FUNCTION(mx_timezone2),
 	FUNCTION(display_timezone2),
 	FUNCTION(update_time),
@@ -231,14 +243,5 @@ const struct menu menu_L2_random =
 	FUNCTION(mx_random),	        // sub menu function
 	FUNCTION(display_random),       // display function
 	FUNCTION(update_time),	        // new display data
-	&menu_L2_Battery,
-};
-// Line2 - Battery 
-const struct menu menu_L2_Battery =
-{
-	FUNCTION(dummy),					// direct function
-	FUNCTION(dummy),					// sub menu function
-	FUNCTION(display_battery_V),		// display function
-	FUNCTION(update_battery_voltage),	// new display data
 	&menu_L2_Date,
 };

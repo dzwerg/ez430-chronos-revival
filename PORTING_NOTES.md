@@ -211,3 +211,109 @@ fixed58: configurable primary UTC standard offset and TZ2 in 0.5-hour steps; Bea
 - Battery conversion remains direct ADC11 AVCC/2 -> centivolts, with no legacy
   battery offset, no TLV factor and no empirical multiplier.
 - All fixed78 stable-beta behavior is otherwise unchanged.
+
+
+## fixed82 test build: display fixes on cleaned GitHub tree
+- Built from the cleaned BSD-3-Clause GitHub repository structure.
+- TZ2 reverted from HH:MM:SS to HH:MM and moved to L2_3..L2_0 so 20..23 display correctly.
+- Backlight setup still uses 1..30 seconds, but the numeric value is now placed on
+  the two full right-hand digits so 20..30 display correctly.
+- No power-management, alarm, input, sensor, battery, timezone-offset or timer logic changed.
+
+
+## fixed83 test build: remove hidden bm.h type dependency
+- fixed82 exposed a legacy dependency: bm.h provided the generic u8/u16/u32/s8/s16/s32 typedefs.
+- BlueRobin/BM remains completely removed.
+- Added include/types.h using standard <stdint.h> integer types and legacy aliases.
+- project.h now includes types.h directly.
+- fixed82 TZ2 HH:MM and backlight 20..30 display fixes are retained.
+- No runtime firmware behavior changed by this fix.
+
+
+## fixed84 test build: project.h include packaging fix
+- fixed83 accidentally contained the literal characters "\\n" between
+  #include <msp430.h> and #include "types.h".
+- types.h therefore was not included and GCC reported unknown u8/u16/etc.
+- fixed84 restores two real preprocessor include lines.
+- BlueRobin/BM remains removed; include/types.h remains the neutral type source.
+- TZ2 HH:MM and backlight 20..30 display fixes are unchanged.
+
+
+## fixed85 compile cleanup after BlueRobin removal
+- Recreated the small generic compatibility layer that old bm.h had provided indirectly.
+- include/types.h now provides stdint types plus NULL support, TRUE/FALSE and BIT(x).
+- timer.c now includes date.h explicitly for add_day(); no implicit function declaration.
+- menu.c includes <stddef.h> explicitly for NULL.
+- Added parentheses to the acceleration measurement-state expression (no behavior change).
+- No BlueRobin/BM headers, symbols or libraries are present.
+- TZ2 HH:MM and backlight 20..30 display fixes remain unchanged.
+
+
+## fixed86 test build: robust backlight setup display
+- fixed85/fixed82 lower-line mixed layout could break at 9->10 when the tens
+  digit became active.
+- Backlight setup no longer writes a six-character mixed string across L2_5..L2_0.
+- ON/OFF is drawn on the full four-digit top line.
+- Seconds 01..30 are drawn only on full lower digits L2_1/L2_0.
+- Counter and button logic are unchanged.
+- TZ2 HH:MM and compile cleanup remain unchanged.
+
+
+## fixed87 test build: TZ2 DLR + timezone SWAP
+- Based on fixed86 stable no-sleep input/display test baseline.
+- TZ2 setup now has three fields: UTC offset -> DLR ON/OFF -> SWAP ON/OFF.
+- TZ2 owns an independent DLR setting.
+- SWAP exchanges Main/TZ2 UTC offsets and DLR settings.
+- SWAP preserves the same UTC instant, rebuilds Main local HH:MM, keeps seconds,
+  and shifts the calendar date backward/forward when the new zone crosses midnight.
+- Added date sub_day() companion to existing add_day().
+- TZ2 remains HH:MM; fixed86 light-menu display fix remains unchanged.
+- Power management remains disabled for this functional test.
+
+
+## fixed88: TZ2 build fix
+- Added missing display2.h include to timezone.c.
+- This declares display_OFF_ON(), used by the new TZ2 DLR and SWAP ON/OFF editors.
+- No functional TZ2/SWAP logic changed from fixed87.
+
+
+## fixed89 test build: unified DST menus and DST-state SWAP
+- User-facing DLR wording corrected to DST (Daylight Saving Time).
+- Main clock DST editor and TZ2 DST editor now use the same visual layout:
+  'DST' on the lower line and ON/OFF on the upper line.
+- TZ2 keeps its own persistent DST ON/OFF value.
+- SWAP exchanges BOTH DST values together with the UTC offsets:
+  Main DST <- previous TZ2 DST, TZ2 DST <- previous Main DST.
+- DST_AutoFlag is synchronized to the new Main DST value after SWAP.
+- Time/date rollover logic from fixed88 is unchanged.
+
+
+## fixed90 test build: correct automatic CET/CEST while CET is in TZ2
+- Reviewed TZ2 DST behavior after SWAP.
+- TZ2 is calculated from UTC + STANDARD timezone offset; therefore its DST
+  transition must be evaluated against standard-local time.
+- Added a dedicated EU standard-local DST evaluator:
+  * last Sunday in March: DST starts at 02:00 standard local (01:00 UTC)
+  * last Sunday in October: DST ends at 02:00 standard local (01:00 UTC)
+- This keeps UTC+1 with DST=ON automatically correct as CET/CEST even when
+  that zone is currently TZ2 rather than Main.
+- SWAP uses the same corrected evaluator when converting the old TZ2 into Main.
+- DST ON/OFF values still swap together with their UTC offsets.
+- Current DST automation is EU-style; it is not a general database of every
+  country's DST rules.
+
+
+## fixed91 final-test candidate: guarded LPM3 power-save phase 1
+- Built on fixed90, where TZ2/DST/SWAP and display/input behavior tested correctly.
+- Re-enabled LPM3 only at the end of the normal foreground main loop.
+- Critical design rule: the CPU never sleeps while button debounce, a held key,
+  short/long-press tracking, alarm-UP release tracking, backlight handling or
+  acceleration polling is active.
+- Button IRQ and the 1-Hz Timer0 ISR already clear LPM3 bits on ISR return.
+- LPM3 entry is performed with interrupts disabled and GIE+LPM3 set atomically,
+  avoiding a check-then-sleep race.
+- ACLK remains active, so clock, timer wakeups and buzzer timing continue.
+- Backlight ON deliberately blocks LPM3 because P2.3 must be sampled every 10 ms
+  for LIGHT long-press recognition. Continuous-light mode therefore remains a
+  high-consumption mode by design.
+- No RF stack is present.

@@ -156,7 +156,7 @@ u16 convert_acceleration_value_to_mgrav(u8 value)
 // *************************************************************************************************
 u8 is_acceleration_measurement(void)
 {
-    return ((sAccel.mode == ACCEL_MODE_ON) && (sAccel.timeout > 0) || (sAgil.state != AGIL_STOP));
+    return (((sAccel.mode == ACCEL_MODE_ON) && (sAccel.timeout > 0)) || (sAgil.state != AGIL_STOP));
 }
 
          

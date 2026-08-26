@@ -16,12 +16,15 @@
 #define BMP085_CMD_PRESS  0x34u
 #define BMP085_OSS        0u
 
+#define SCP1000_ADDR      0x11u
+
 /* Existing altitude conversion tables retained for compatibility. */
 const s16 h0[17] = { -153, 0, 111, 540, 989, 1457, 1949, 2466, 3012, 3591, 4206, 4865, 5574, 6344, 7185, 8117, 9164 };
 const u16 p0[17] = { 1031, 1013, 1000, 950, 900, 850, 800, 750, 700, 650, 600, 550, 500, 450, 400, 350, 300 };
 float p[17];
 
 u8 ps_ok;
+u8 ps_sensor_type;
 
 static s16 ac1, ac2, ac3, b1, b2, mb, mc, md;
 static u16 ac4, ac5, ac6;
@@ -143,12 +146,58 @@ static u16 bmp_read16(u8 reg)
     return (u16)(((u16)b[0] << 8) | b[1]);
 }
 
+static u8 scp_write_reg(u8 reg, u8 value)
+{
+    u8 ok;
+    bmp_start();
+    ok = bmp_write_byte((u8)(SCP1000_ADDR << 1));
+    if (ok) ok = bmp_write_byte(reg);
+    if (ok) ok = bmp_write_byte(value);
+    bmp_stop();
+    return ok;
+}
+
+static u8 scp_read_regs(u8 reg, u8 *dst, u8 count)
+{
+    u8 ok, i;
+    bmp_start();
+    ok = bmp_write_byte((u8)(SCP1000_ADDR << 1));
+    if (ok) ok = bmp_write_byte(reg);
+    if (!ok) { bmp_stop(); return 0; }
+    bmp_restart();
+    ok = bmp_write_byte((u8)((SCP1000_ADDR << 1) | 1u));
+    if (!ok) { bmp_stop(); return 0; }
+    for (i = 0; i < count; ++i)
+        dst[i] = bmp_read_byte((u8)(i + 1u < count));
+    bmp_stop();
+    return 1;
+}
+
+static u8 scp_read8(u8 reg)
+{
+    u8 value = 0;
+    scp_read_regs(reg, &value, 1);
+    return value;
+}
+
+static u16 scp_read16(u8 reg)
+{
+    u8 value[2] = { 0, 0 };
+    scp_read_regs(reg, value, 2);
+    return (u16)(((u16)value[0] << 8) | value[1]);
+}
+
 /* Compatibility exports retained for older code/debug helpers. */
-u8 ps_write_register(u8 address, u8 data) { return bmp_write_reg(address, data); }
+u8 ps_write_register(u8 address, u8 data)
+{
+    return (ps_sensor_type == PS_SENSOR_SCP1000) ?
+           scp_write_reg(address, data) : bmp_write_reg(address, data);
+}
 u16 ps_read_register(u8 address, u8 mode)
 {
-    if (mode == PS_TWI_16BIT_ACCESS) return bmp_read16(address);
-    return bmp_read8(address);
+    if (ps_sensor_type == PS_SENSOR_SCP1000)
+        return (mode == PS_TWI_16BIT_ACCESS) ? scp_read16(address) : scp_read8(address);
+    return (mode == PS_TWI_16BIT_ACCESS) ? bmp_read16(address) : bmp_read8(address);
 }
 
 void ps_init(void)
@@ -159,27 +208,76 @@ void ps_init(void)
     PS_INT_IE &= ~PS_INT_PIN; /* BMP085 is sampled synchronously; EOC IRQ not required. */
     PS_INT_IFG &= ~PS_INT_PIN;
     ps_ok = 0;
+    ps_sensor_type = PS_SENSOR_NONE;
 
     bmp_delay_ticks(CONV_MS_TO_TICKS(10));
-    if (bmp_read8(BMP085_REG_ID) != BMP085_CHIP_ID) return;
 
-    ac1 = (s16)bmp_read16(0xAA); ac2 = (s16)bmp_read16(0xAC); ac3 = (s16)bmp_read16(0xAE);
-    ac4 = bmp_read16(0xB0); ac5 = bmp_read16(0xB2); ac6 = bmp_read16(0xB4);
-    b1  = (s16)bmp_read16(0xB6); b2  = (s16)bmp_read16(0xB8); mb  = (s16)bmp_read16(0xBA);
-    mc  = (s16)bmp_read16(0xBC); md  = (s16)bmp_read16(0xBE);
+    /* Newer white-PCB watch: Bosch BMP085 at address 0x77. */
+    if (bmp_read8(BMP085_REG_ID) == BMP085_CHIP_ID)
+    {
+        ac1 = (s16)bmp_read16(0xAA); ac2 = (s16)bmp_read16(0xAC); ac3 = (s16)bmp_read16(0xAE);
+        ac4 = bmp_read16(0xB0); ac5 = bmp_read16(0xB2); ac6 = bmp_read16(0xB4);
+        b1  = (s16)bmp_read16(0xB6); b2  = (s16)bmp_read16(0xB8); mb  = (s16)bmp_read16(0xBA);
+        mc  = (s16)bmp_read16(0xBC); md  = (s16)bmp_read16(0xBE);
 
-    if ((ac4 == 0u) || (ac5 == 0u) || (ac6 == 0u) || (ac4 == 0xFFFFu)) return;
-    ps_ok = 1;
+        if ((ac4 != 0u) && (ac5 != 0u) && (ac6 != 0u) && (ac4 != 0xFFFFu))
+        {
+            ps_sensor_type = PS_SENSOR_BMP085;
+            ps_ok = 1;
+            return;
+        }
+    }
+
+    /* Older watch: VTI SCP1000-D0x at address 0x11. Reset it, then use
+       STATUS and the EEPROM checksum register as the identity check. */
+    if (!scp_write_reg(0x06u, 0x01u)) return;
+    bmp_delay_ticks(CONV_MS_TO_TICKS(100));
+    if (((scp_read8(0x07u) & BIT0) == 0u) && (scp_read8(0x7Fu) == 0x01u))
+    {
+        ps_sensor_type = PS_SENSOR_SCP1000;
+        ps_ok = 1;
+    }
 }
 
-void ps_start(void) { /* BMP085 uses forced conversions in ps_get_temp/ps_get_pa. */ }
-void ps_stop(void)  { /* BMP085 returns to idle automatically after each conversion. */ }
+void ps_start(void)
+{
+    if (ps_sensor_type == PS_SENSOR_SCP1000)
+    {
+        PS_INT_DIR &= ~PS_INT_PIN;
+        PS_INT_IES &= ~PS_INT_PIN;
+        PS_INT_IFG &= ~PS_INT_PIN;
+        scp_write_reg(0x03u, 0x0Bu); /* ultra-low-power continuous mode */
+        bmp_delay_ticks(CONV_MS_TO_TICKS(120)); /* first conversion */
+        PS_INT_IE |= PS_INT_PIN;
+    }
+}
+
+void ps_stop(void)
+{
+    if (ps_sensor_type == PS_SENSOR_SCP1000)
+    {
+        PS_INT_IE &= ~PS_INT_PIN;
+        PS_INT_IFG &= ~PS_INT_PIN;
+        scp_write_reg(0x03u, 0x00u); /* standby */
+    }
+}
 
 u16 ps_get_temp(void)
 {
     s32 x1, x2, t;
     u16 ut;
     if (!ps_ok) return 2732u;
+    if (ps_sensor_type == PS_SENSOR_SCP1000)
+    {
+        u16 data = scp_read16(0x81u);
+        u16 magnitude;
+        if (data & BIT(13))
+        {
+            magnitude = (u16)((~(data | 0xC000u) + 1u) / 2u);
+            return (u16)(2732u - magnitude);
+        }
+        return (u16)(2732u + data / 2u);
+    }
     if (!bmp_write_reg(BMP085_REG_CTRL, BMP085_CMD_TEMP)) return 2732u;
     bmp_delay_ticks(CONV_MS_TO_TICKS(5));
     ut = bmp_read16(BMP085_REG_DATA);
@@ -198,6 +296,12 @@ u32 ps_get_pa(void)
     s32 b6, x1, x2, x3, b3, pcomp;
     u32 b4, b7, up;
     if (!ps_ok) return 0;
+    if (ps_sensor_type == PS_SENSOR_SCP1000)
+    {
+        u32 data = (u32)(scp_read8(0x7Fu) & 0x07u) << 16;
+        data |= scp_read16(0x80u);
+        return data >> 2;
+    }
 
     if (!bmp_write_reg(BMP085_REG_CTRL, (u8)(BMP085_CMD_PRESS + (BMP085_OSS << 6)))) return 0;
     bmp_delay_ticks(CONV_MS_TO_TICKS(5));

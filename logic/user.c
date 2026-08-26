@@ -166,6 +166,8 @@ void set_value(s32 * value, u8 digits, u8 blanks, s32 limitLow, s32 limitHigh, u
     u16 repeat_at = 0;
     u8 held_dir = 0;
     u8 repeat_started = 0;
+    u8 num_hold_tracking = 0;
+    u16 num_hold_started_at = 0;
 	
 	// Clear button flags
 	button.all_flags = 0;
@@ -230,13 +232,25 @@ void set_value(s32 * value, u8 digits, u8 blanks, s32 limitLow, s32 limitHigh, u
         {
             u8 old_stable = stable_edit;
             u8 newly_pressed;
+            u8 newly_released;
             stable_edit = raw_edit;
             newly_pressed = stable_edit & (u8)~old_stable;
+            newly_released = old_stable & (u8)~stable_edit;
 
             if (newly_pressed & BUTTON_STAR_PIN)
                 button.flag.star = 1;
             if (newly_pressed & BUTTON_NUM_PIN)
+            {
+                /* Defer NUM/# until release so a second long press can open
+                   a nested settings menu without also advancing a field. */
+                num_hold_tracking = 1;
+                num_hold_started_at = TA0R;
+            }
+            if ((newly_released & BUTTON_NUM_PIN) && num_hold_tracking)
+            {
                 button.flag.num = 1;
+                num_hold_tracking = 0;
+            }
 
             if (newly_pressed & BUTTON_UP_PIN)
             {
@@ -264,6 +278,13 @@ void set_value(s32 * value, u8 digits, u8 blanks, s32 limitLow, s32 limitHigh, u
                 sButton.repeats = 0;
                 start_blink();
             }
+        }
+
+        if (num_hold_tracking && (stable_edit & BUTTON_NUM_PIN) &&
+            ((u16)(TA0R - num_hold_started_at) >= (u16)32768UL))
+        {
+            button.flag.num_long = 1;
+            num_hold_tracking = 0;
         }
 
         if (held_dir && (stable_edit & held_dir))
@@ -295,6 +316,9 @@ void set_value(s32 * value, u8 digits, u8 blanks, s32 limitLow, s32 limitHigh, u
 
 		// Button STAR (short) button: exit function
 		if (button.flag.star) break;
+
+		// Long NUM/#: let the owning settings menu open its nested menu.
+		if (button.flag.num_long) break;
 
 		// NUM button: exit function and goto to next value (if available)
 		if (button.flag.num)

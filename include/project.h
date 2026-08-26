@@ -39,6 +39,7 @@
 // *************************************************************************************************
 // Include section
 #include <msp430.h>
+#include "types.h"
 // *************************************************************************************************
 // Defines section
 
@@ -102,7 +103,6 @@ typedef union
     u16 temperature_measurement 	: 1;    // 1 = Measure temperature
     u16 voltage_measurement    		: 1;    // 1 = Measure voltage
     u16 altitude_measurement    	: 1;    // 1 = Measure air pressure
-    u16	acceleration_measurement	: 1; 	// 1 = Measure acceleration
     u16 buzzer      				: 1;    // 1 = Output buzzer
   } flag;
   u16 all_flags;            // Shortcut to all display flags (for reset)

@@ -51,6 +51,7 @@
 #include "clock.h"
 #include "user.h"
 #include "display2.h"
+#include "menu.h"
 
 
 // *************************************************************************************************
@@ -156,7 +157,7 @@ const u8 DayStr[MAX_LANGUAGES][7][3] = {
     { SEG_A+SEG_B+      SEG_D+SEG_E+      SEG_G,     //    2
       SEG_A+                  SEG_E+SEG_F+SEG_G,     //    F
                                               0  },  //
-    // TUE = Terça - feira, Terça: TER -> 3F
+    // TUE = Tera - feira, Tera: TER -> 3F
     { SEG_A+SEG_B+SEG_C+SEG_D+            SEG_G,     //    3
       SEG_A+                  SEG_E+SEG_F+SEG_G,     //    F
                                               0  },  //
@@ -172,41 +173,41 @@ const u8 DayStr[MAX_LANGUAGES][7][3] = {
     { SEG_A+      SEG_C+SEG_D+SEG_E+SEG_F+SEG_G,     //    6
       SEG_A+                  SEG_E+SEG_F+SEG_G,     //    F
                                               0  },  //
-    // SAT = Sábado: SAB -> SA
+    // SAT = Sbado: SAB -> SA
     { SEG_A+      SEG_C+SEG_D+      SEG_F+SEG_G,     //    S
       SEG_A+SEG_B+SEG_C+      SEG_E+SEG_F+SEG_G,     //    A    
                                               0  }   //
     },
 // Russian [3][][] - thanks to Maksim
     {   
-    // ÏÍä
-    { SEG_A+SEG_B+SEG_C      +SEG_E+SEG_F      ,     //    Ï
-      SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+SEG_F      ,     //    Î    
-            SEG_B+SEG_C      +SEG_E+SEG_F+SEG_G, },  //    Í
-    // ÂÒ
-    { SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+SEG_F+SEG_G,     //    Â
-      SEG_A                                    ,     //    1/2 Ò
-      SEG_A+                  SEG_E+SEG_F        },  //    2/2 Ò
-    // ÑÐä
-    { SEG_A            +SEG_D+SEG_E+SEG_F      ,     //    Ñ
-      SEG_A+SEG_B            +SEG_E+SEG_F+SEG_G,     //    Ð
-      SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+      SEG_G  },  //    ä
-    // ×Ò
-    {       SEG_B+SEG_C            +SEG_F+SEG_G,     //    ×
-      SEG_A                                    ,     //    1/2 Ò
-      SEG_A+                  SEG_E+SEG_F        },  //    2/2 Ò
-    // ÏÒ
-    { SEG_A+SEG_B+SEG_C       +SEG_E+SEG_F     ,     //    Ï
-      SEG_A                                    ,     //    1/2 Ò
-      SEG_A+                  SEG_E+SEG_F        },  //    2/2 Ò
-    // ÑÓÁ
-    { SEG_A            +SEG_D+SEG_E+SEG_F      ,     //    Ñ
-            SEG_B+SEG_C+SEG_D      +SEG_F+SEG_G,     //    Ó
-      SEG_A      +SEG_C+SEG_D+SEG_E+SEG_F+SEG_G  },  //    Á
-    // ÂÎÑ
-    { SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+SEG_F+SEG_G,     //    Â
-      SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+SEG_F      ,     //    Î
-      SEG_A            +SEG_D+SEG_E+SEG_F        }   //    Ñ      
+    // 
+    { SEG_A+SEG_B+SEG_C      +SEG_E+SEG_F      ,     //    
+      SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+SEG_F      ,     //        
+            SEG_B+SEG_C      +SEG_E+SEG_F+SEG_G, },  //    
+    // 
+    { SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+SEG_F+SEG_G,     //    
+      SEG_A                                    ,     //    1/2 
+      SEG_A+                  SEG_E+SEG_F        },  //    2/2 
+    // 
+    { SEG_A            +SEG_D+SEG_E+SEG_F      ,     //    
+      SEG_A+SEG_B            +SEG_E+SEG_F+SEG_G,     //    
+      SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+      SEG_G  },  //    
+    // 
+    {       SEG_B+SEG_C            +SEG_F+SEG_G,     //    
+      SEG_A                                    ,     //    1/2 
+      SEG_A+                  SEG_E+SEG_F        },  //    2/2 
+    // 
+    { SEG_A+SEG_B+SEG_C       +SEG_E+SEG_F     ,     //    
+      SEG_A                                    ,     //    1/2 
+      SEG_A+                  SEG_E+SEG_F        },  //    2/2 
+    // 
+    { SEG_A            +SEG_D+SEG_E+SEG_F      ,     //    
+            SEG_B+SEG_C+SEG_D      +SEG_F+SEG_G,     //    
+      SEG_A      +SEG_C+SEG_D+SEG_E+SEG_F+SEG_G  },  //    
+    // 
+    { SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+SEG_F+SEG_G,     //    
+      SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+SEG_F      ,     //    
+      SEG_A            +SEG_D+SEG_E+SEG_F        }   //          
     },
 // Spanish [4][][] - Thanks to Jorge
     {
@@ -222,7 +223,7 @@ const u8 DayStr[MAX_LANGUAGES][7][3] = {
     { SEG_A+SEG_B+            SEG_E+SEG_F      ,     //    1/2 M
       SEG_A+SEG_B+SEG_C+            SEG_F      ,     //    2/2 M
       SEG_A+SEG_B+SEG_C+      SEG_E+SEG_F+SEG_G  },  //    A
-    // WE = Miércoles -> Mi
+    // WE = Mircoles -> Mi
     { SEG_A+SEG_B+            SEG_E+SEG_F      ,     //    1/2 M
       SEG_A+SEG_B+SEG_C+            SEG_F      ,     //    2/2 M
                               SEG_E              },  //    i
@@ -234,7 +235,7 @@ const u8 DayStr[MAX_LANGUAGES][7][3] = {
     {       SEG_B+SEG_C+SEG_D+SEG_E+SEG_F      ,     //    U
                               SEG_E            ,     //    i
                                               0  },  //    
-    // SAt = Sábado -> SA
+    // SAt = Sbado -> SA
     { SEG_A+      SEG_C+SEG_D+      SEG_F+SEG_G,     //    S
       SEG_A+SEG_B+SEG_C+      SEG_E+SEG_F+SEG_G,     //    A
                                               0  }   //    
@@ -426,6 +427,40 @@ void add_day(void)
 }
 
 
+
+// *************************************************************************************************
+// @fn          sub_day
+// @brief       Subtract one day from current date. Used by timezone SWAP.
+// *************************************************************************************************
+void sub_day(void)
+{
+    if (sDate.DayOfWeek == 0)
+        sDate.DayOfWeek = 6;
+    else
+        sDate.DayOfWeek--;
+
+    if (sDate.day > 1)
+    {
+        sDate.day--;
+    }
+    else
+    {
+        if (sDate.month > 1)
+        {
+            sDate.month--;
+        }
+        else
+        {
+            sDate.month = 12;
+            if (sDate.year > 1) sDate.year--;
+        }
+        sDate.day = get_numberOfDays(sDate.month, sDate.year);
+    }
+
+    display.flag.full_update = 1;
+}
+
+
 // *************************************************************************************************
 // @fn          mx_date
 // @brief       Date set routine.
@@ -435,10 +470,19 @@ void add_day(void)
 void mx_date(u8 line)
 {
     u8 select;
+    u8 visibility_mode = 0;
     s32 day;
     s32 DayOfWeek;
     s32 month;
     s32 year;
+    s32 bin_enabled;
+    s32 dice_enabled;
+    s32 batt_enabled;
+    s32 moon_enabled;
+    s32 beat_enabled;
+    s32 alti_enabled;
+    s32 temp_enabled;
+    s32 timezone2_enabled;
     s16 max_days;
     u8 * str;
     u8 * str1;
@@ -451,6 +495,14 @@ void mx_date(u8 line)
     DayOfWeek = sDate.DayOfWeek;
     month     = sDate.month;
     year      = sDate.year;
+    bin_enabled = MenuBinEnabled;
+    dice_enabled = MenuDiceEnabled;
+    batt_enabled = MenuBatteryEnabled;
+    moon_enabled = MenuMoonEnabled;
+    beat_enabled = MenuBeatEnabled;
+    alti_enabled = MenuAltitudeEnabled;
+    temp_enabled = MenuTemperatureEnabled;
+    timezone2_enabled = MenuTimezone2Enabled;
     
     // Init value index
     select = 0; 
@@ -491,6 +543,23 @@ void mx_date(u8 line)
             sDate.DayOfWeek = DayOfWeek;
             sDate.month = month;
             sDate.year = year;
+            MenuBinEnabled = (u8)bin_enabled;
+            MenuDiceEnabled = (u8)dice_enabled;
+            MenuBatteryEnabled = (u8)batt_enabled;
+            MenuMoonEnabled = (u8)moon_enabled;
+            MenuBeatEnabled = (u8)beat_enabled;
+            MenuAltitudeEnabled = (u8)alti_enabled;
+            MenuTemperatureEnabled = (u8)temp_enabled;
+            MenuTimezone2Enabled = (u8)timezone2_enabled;
+            if (visibility_mode)
+            {
+                /* STAR leaves only the nested menu and returns to the
+                   beginning of the normal date editor. */
+                visibility_mode = 0;
+                select = 0;
+                button.flag.star = 0;
+                continue;
+            }
             // Full display update is done when returning from function
             break;
         }
@@ -498,7 +567,20 @@ void mx_date(u8 line)
         switch (select)
         {
             case 0:     // Set year
-                        clear_line(LINE2);
+                        /* Rebuild the date screen after wrapping around from
+                           the ON/OFF options so no old OFF text remains. */
+                        clear_display();
+                        if (sys.flag.use_metric_units)
+                        {
+                            display_chars(LCD_SEG_L1_3_2, chronos_itoa(day, 2, 0), SEG_ON);
+                            display_chars(LCD_SEG_L1_1_0, chronos_itoa(month, 2, 0), SEG_ON);
+                        }
+                        else
+                        {
+                            display_chars(LCD_SEG_L1_3_2, chronos_itoa(month, 2, 0), SEG_ON);
+                            display_chars(LCD_SEG_L1_1_0, chronos_itoa(day, 2, 0), SEG_ON);
+                        }
+                        display_symbol(LCD_SEG_L1_DP1, SEG_ON);
                         set_value(&year, 4, 0, 2011, 2100, SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE, LCD_SEG_L2_3_0, display_value1);
                         select = 1;
                         break;
@@ -534,6 +616,67 @@ void mx_date(u8 line)
                         set_value(&DayOfWeek, 1, 0, 0, 6, SETVALUE_ROLLOVER_VALUE + SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE, LCD_SEG_L2_4_0, display_DayOfWeek);
                         select = 0;
                         break;
+            case 5:     // Binary watch menu ON/OFF
+                        clear_display();
+                        display_chars(LCD_SEG_L2_4_2, (u8 *)"BIN", SEG_ON);
+                        set_value(&bin_enabled, 0, 0, 0, 1, SETVALUE_ROLLOVER_VALUE + SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE, LCD_SEG_L1_3_0, display_OFF_ON);
+                        select = 6;
+                        break;
+            case 6:     // Dice/random menu ON/OFF
+                        clear_display();
+                        display_chars(LCD_SEG_L2_3_0, (u8 *)"DICE", SEG_ON);
+                        set_value(&dice_enabled, 0, 0, 0, 1, SETVALUE_ROLLOVER_VALUE + SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE, LCD_SEG_L1_3_0, display_OFF_ON);
+                        select = 7;
+                        break;
+            case 7:     // Battery menu ON/OFF
+                        clear_display();
+                        display_chars(LCD_SEG_L2_3_0, (u8 *)"BATT", SEG_ON);
+                        set_value(&batt_enabled, 0, 0, 0, 1, SETVALUE_ROLLOVER_VALUE + SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE, LCD_SEG_L1_3_0, display_OFF_ON);
+                        select = 8;
+                        break;
+            case 8:     // Moon menu ON/OFF
+                        clear_display();
+                        display_chars(LCD_SEG_L2_3_0, (u8 *)"MOON", SEG_ON);
+                        set_value(&moon_enabled, 0, 0, 0, 1, SETVALUE_ROLLOVER_VALUE + SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE, LCD_SEG_L1_3_0, display_OFF_ON);
+                        select = 9;
+                        break;
+            case 9:     // Full-screen Beat menu ON/OFF; TZ2 Beat view remains
+                        clear_display();
+                        display_chars(LCD_SEG_L2_3_0, (u8 *)"BEAT", SEG_ON);
+                        set_value(&beat_enabled, 0, 0, 0, 1, SETVALUE_ROLLOVER_VALUE + SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE, LCD_SEG_L1_3_0, display_OFF_ON);
+                        select = 10;
+                        break;
+            case 10:    // Altitude/pressure menu ON/OFF
+                        clear_display();
+                        display_chars(LCD_SEG_L2_3_0, (u8 *)"ALTI", SEG_ON);
+                        set_value(&alti_enabled, 0, 0, 0, 1, SETVALUE_ROLLOVER_VALUE + SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE, LCD_SEG_L1_3_0, display_OFF_ON);
+                        select = 11;
+                        break;
+            case 11:    // Temperature menu ON/OFF
+                        clear_display();
+                        display_chars(LCD_SEG_L2_3_0, (u8 *)"TEMP", SEG_ON);
+                        set_value(&temp_enabled, 0, 0, 0, 1, SETVALUE_ROLLOVER_VALUE + SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE, LCD_SEG_L1_3_0, display_OFF_ON);
+                        select = 12;
+                        break;
+            case 12:    // Second timezone menu ON/OFF
+                        clear_display();
+                        display_char(LCD_SEG_L2_4, 'T', SEG_ON);
+                        /* Distinguish Z from 2 by omitting the centre bar. */
+                        display_charSegments(LCD_SEG_L2_3, SEG_A + SEG_B + SEG_D + SEG_E, SEG_ON);
+                        display_char(LCD_SEG_L2_2, '2', SEG_ON);
+                        set_value(&timezone2_enabled, 0, 0, 0, 1, SETVALUE_ROLLOVER_VALUE + SETVALUE_DISPLAY_VALUE + SETVALUE_NEXT_VALUE, LCD_SEG_L1_3_0, display_OFF_ON);
+                        select = 5;
+                        break;
+        }
+
+        /* A second long NUM/# press from anywhere in the date editor opens
+           the dedicated menu-visibility submenu. */
+        if (button.flag.num_long)
+        {
+            button.flag.num_long = 0;
+            button.flag.num = 0;
+            visibility_mode = 1;
+            select = 5;
         }
         
         // Check if day is still valid, if not clamp to last day of current month
@@ -653,7 +796,16 @@ void display_date(u8 line, u8 update)
     }
     else if (update == DISPLAY_LINE_UPDATE_PARTIAL)
          {
-         display_symbol(LCD_SEG_L2_COL0, SEG_ON_BLINK_OFF);
+         if (sDate.display == DISPLAY_ALTERNATIVE_VIEW_4)
+         {
+             display_chars(LCD_SEG_L2_1_0,
+                           chronos_itoa(sTime.second, 2, 0), SEG_ON);
+         }
+         else if (sDate.display == DISPLAY_ALTERNATIVE_VIEW_3)
+         {
+             display_symbol(LCD_SEG_L2_COL0,
+                            (sTime.second & 1u) ? SEG_ON_BLINK_OFF : SEG_OFF_BLINK_OFF);
+         }
          }   
          
          else if (update == DISPLAY_LINE_CLEAR)
@@ -663,5 +815,3 @@ void display_date(u8 line, u8 update)
                   // sDate.display = DISPLAY_DEFAULT_VIEW;
               }   
 }
-
-

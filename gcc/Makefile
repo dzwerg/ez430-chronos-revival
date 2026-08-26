@@ -55,6 +55,8 @@ SRCS := $(wildcard \
 SRCS := $(filter-out %/test.c %/stubs.c %/miscellaneous.c,$(SRCS))
 # Complete RF stack removed: no CC1101 driver, RF1A ISR, SimpliciTI UI, or RFBSL.
 SRCS := $(filter-out %/radio.c %/rf1a.c %/rfsimpliciti.c %/rfbsl.c,$(SRCS))
+# The complete motion feature family is no longer reachable.
+SRCS := $(filter-out %/acceleration.c %/agility.c %/game.c %/vti_as.c,$(SRCS))
 SRCS += $(PROJECT)/main.c
 
 OBJS := $(patsubst $(PROJECT)/%.c,$(BUILD)/%.o,$(SRCS))

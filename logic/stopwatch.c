@@ -418,6 +418,14 @@ void sx_stopwatch(u8 line)
 	}
 }
 
+/* UP: stop and reset immediately without opening the old mode dialog. */
+void sx_reset_stopwatch(u8 line)
+{
+	stop_stopwatch();
+	reset_stopwatch();
+	display_stopwatch(line, DISPLAY_LINE_UPDATE_FULL);
+}
+
 
 // *************************************************************************************************
 // @fn          display_stopwatch
@@ -572,5 +580,4 @@ void set_stopwatchmode(void)
     // Clear button flag
     button.all_flags = 0;
 }
-
 

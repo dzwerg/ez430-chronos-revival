@@ -5,6 +5,10 @@ gcc/build/
 *.elf
 *.hex
 *.map
+Log/
+gcc/Log/
+release/*.hex
+release/*.bin
 
 # Editor / OS
 .vscode/

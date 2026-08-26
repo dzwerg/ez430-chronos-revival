@@ -164,7 +164,7 @@ u8 is_altitude_measurement(void)
 // *************************************************************************************************
 void start_altitude_measurement(void)
 {
-    /* fixed41: probe the BMP085 lazily, only when the user opens Altitude.
+    /* Probe BMP085/SCP1000 lazily, only when the user opens Altitude.
        This keeps boot, clock and buttons alive even if the pressure sensor is absent. */
     if (!ps_ok)
     {
@@ -182,7 +182,7 @@ void start_altitude_measurement(void)
     // Start altitude measurement if timeout has elapsed
     if (sAlt.timeout == 0)
     {
-        // BMP085 uses forced I2C conversions; no DRDY interrupt is required.
+        // The driver selects forced BMP085 or continuous SCP1000 operation.
         ps_start();
         sAlt.timeout = ALTITUDE_MEASUREMENT_TIMEOUT;
         do_altitude_measurement(FILTER_OFF);
@@ -204,7 +204,7 @@ void stop_altitude_measurement(void)
     // Stop pressure sensor
     ps_stop();
     
-    // BMP085 path does not use the pressure EOC/DRDY interrupt.
+    // The driver also disables the SCP1000 DRDY interrupt when applicable.
     // Clear timeout counter
     sAlt.timeout = 0;
 }
@@ -221,7 +221,7 @@ void do_altitude_measurement(u8 filter)
 {
     volatile u32 pressure;
 
-    // BMP085 conversion readiness is handled synchronously inside the driver.
+    // Conversion readiness is handled inside the selected sensor driver.
     // Get temperature (format is *10�K) from sensor
     sAlt.temperature = ps_get_temp();
 

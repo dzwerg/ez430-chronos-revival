@@ -45,7 +45,6 @@
 // driver
 #include "ports.h"
 #include "buzzer.h"
-#include "vti_as.h"
 #include "vti_ps.h"
 #include "timer.h"
 #include "display.h"
@@ -114,7 +113,6 @@ void init_buttons(void)
 // @fn          PORT2_ISR
 // @brief       Interrupt service routine for
 //					- buttons 
-//					- acceleration sensor CMA_INT 
 //					- pressure sensor DRDY
 // @param       none
 // @return      none
@@ -129,10 +127,7 @@ __attribute__((interrupt(PORT2_VECTOR))) void PORT2_ISR(void)
 
     BUTTONS_IFG &= (u8)~int_flag;
 
-    /* Sensor events share PORT2 with the buttons. Keep these lightweight and
-       defer the actual I/O/ADC work to process_requests() in foreground. */
-    if (int_flag & AS_INT_PIN)
-        request.flag.acceleration_measurement = 1;
+    /* The pressure sensor still shares PORT2 with the buttons. */
     if (int_flag & PS_INT_PIN)
         request.flag.altitude_measurement = 1;
 
@@ -296,4 +291,3 @@ void button_repeat_function(void)
 		stop_blink();
 	}
 }
-
