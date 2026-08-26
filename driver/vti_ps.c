@@ -152,7 +152,11 @@ static u8 scp_write_reg(u8 reg, u8 value)
     bmp_start();
     ok = bmp_write_byte((u8)(SCP1000_ADDR << 1));
     if (ok) ok = bmp_write_byte(reg);
-    if (ok) ok = bmp_write_byte(value);
+    /* The SCP1000 does not ACK the final data byte.  The original TI/VTI
+       driver deliberately ignores that last ACK, so only the device-address
+       and register-address ACKs determine whether this transaction started
+       successfully. */
+    if (ok) (void)bmp_write_byte(value);
     bmp_stop();
     return ok;
 }
