@@ -70,6 +70,7 @@
 // *************************************************************************************************
 // Prototypes section
 void init_application(void);
+void init_ucs(void);
 void init_global_variables(void);
 void wakeup_event(void);
 void process_requests(void);
@@ -111,6 +112,10 @@ volatile u8 fixed27_tick_pending = 0;
 /* fixed37: PORT2 ISR only feeds button flags while a blocking set menu is active. */
 volatile u8 g_set_mode_active = 0;
 volatile u8 g_alarm_up_irq = 0; /* fixed55: reliable UP event from PORT2 ISR */
+/* RC1.3: keep retrying XT1 startup from the foreground. */
+static u8 xt1_startup_pending = 0;
+static u8 xt1_startup_attempts = 0;
+static void service_xt1_startup(void);
 
 // Function pointers for LINE1 and LINE2 display function 
 void (*fptr_lcd_function_line1)(u8 line, u8 update);
@@ -329,6 +334,11 @@ int main(void)
 
     /* Start from the proven-good LCD/ACLK bootstrap used by fixed28. */
     bootdiag_lcd_init();
+
+    /* RC1.3: fixed28's diagnostic bootstrap forces ACLK to REFO.
+       The normal application startup path no longer calls init_application(),
+       so explicitly restore the original XT1/DCO clock initialization here. */
+    init_ucs();
 
     /* fixed91: radio disabled; watchdog enabled; guarded LPM3 power-save active. */
     button.all_flags  = 0;
@@ -757,6 +767,10 @@ int main(void)
             fixed27_tick_pending = 0;
             __enable_interrupt();
 
+            /* RC1.3: oscillator fault flags are sticky.  Clear them once
+               per second until the 32.768-kHz crystal has really taken over. */
+            service_xt1_startup();
+
             /* fixed44: restore only the safe 1-Hz application services which
                were lost when clock_tick() was removed from the ISR. */
             cdtimer_tick();
@@ -929,10 +943,11 @@ void init_ucs(void)
 {
 	u16 osc_timeout;
 
-	/* RC1.2: use the watch's 32.768-kHz crystal for accurate timekeeping.
+	/* RC1.3: use the watch's 32.768-kHz crystal for accurate timekeeping.
 	   RC1/RC1.1 still contained the fixed19 diagnostic workaround, which
 	   deliberately disabled XT1 and used the much less accurate REFO clock.
-	   Keep startup bounded so a damaged crystal cannot make the watch hang. */
+	   Keep startup bounded; the UCS automatically uses REFO while XT1 has a
+	   fault, without changing the selected XT1 source. */
 	P5SEL |= BIT0 | BIT1;
 	UCSCTL6 &= ~XT1OFF;
 	UCSCTL6 |= XCAP_3;
@@ -954,18 +969,34 @@ void init_ucs(void)
 		UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + XT1HFOFFG + DCOFFG);
 		SFRIFG1 &= ~OFIFG;
 		__delay_cycles(64);
-	} while ((SFRIFG1 & OFIFG) && --osc_timeout);
+	} while ((UCSCTL7 & XT1LFOFFG) && --osc_timeout);
 
-	if (SFRIFG1 & OFIFG)
+	/* Do not switch XT1 off when it merely needs longer to start.  Fault bits
+	   are sticky, so foreground code clears them again once per second. */
+	xt1_startup_pending = (UCSCTL7 & XT1LFOFFG) ? 1u : 0u;
+	xt1_startup_attempts = 120u;
+}
+
+
+/* Let a slow-starting watch crystal recover without blocking boot.  During a
+   real XT1 fault the CC430 UCS supplies ACLK/FLLREF from REFO automatically. */
+static void service_xt1_startup(void)
+{
+	if (!xt1_startup_pending) return;
+
+	UCSCTL7 &= ~(XT1LFOFFG + DCOFFG);
+	SFRIFG1 &= ~OFIFG;
+	__delay_cycles(64);
+
+	if (!(UCSCTL7 & XT1LFOFFG))
 	{
-		/* Broken/missing watch crystal: remain usable on REFO instead of
-		   hanging during boot. Accuracy will be reduced in this fallback. */
-		P5SEL &= ~(BIT0 | BIT1);
-		UCSCTL6 |= XT1OFF;
-		UCSCTL3 = SELREF__REFOCLK;
-		UCSCTL4 = SELA__REFOCLK | SELS__DCOCLKDIV | SELM__DCOCLKDIV;
-		UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + XT1HFOFFG + DCOFFG);
-		SFRIFG1 &= ~OFIFG;
+		xt1_startup_pending = 0;
+	}
+	else if (--xt1_startup_attempts == 0u)
+	{
+		/* A genuinely missing or damaged crystal remains safely on the UCS
+		   hardware's automatic REFO fail-safe, but stop needless retries. */
+		xt1_startup_pending = 0;
 	}
 }
 
